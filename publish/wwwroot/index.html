@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production ERP</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+        :root { --primary: #4e73df; --secondary: #858796; --success: #1cc88a; --info: #36b9cc; --warning: #f6c23e; --danger: #e74a3b; --dark: #5a5c69; --light: #f8f9fc; --sidebar-width: 250px; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--light); color: #334155; overflow-x: hidden; }
+        #loginContainer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, var(--primary), var(--info)); display: flex; align-items: center; justify-content: center; z-index: 3000; }
+        .login-card { width: 400px; padding: 3rem; background: white; border-radius: 1rem; box-shadow: 0 1rem 3rem rgba(0,0,0,.175); }
+        #wrapper { display: flex; width: 100%; height: 100vh; overflow: hidden; }
+        .hidden { display: none !important; }
+        #sidebar { width: var(--sidebar-width); background: linear-gradient(180deg, #4e73df 10%, #224abe 100%); color: white; display: flex; flex-direction: column; position: fixed; height: 100%; z-index: 1050; transition: 0.3s; }
+        .nav-link { color: rgba(255,255,255,0.8); padding: 1rem; cursor: pointer; text-decoration: none; }
+        .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.2); color: white; font-weight: bold; }
+        #content-wrapper { flex: 1; margin-left: var(--sidebar-width); display: flex; flex-direction: column; height: 100%; overflow-y: auto; }
+        .card { border: none; border-radius: 0.75rem; box-shadow: 0 .15rem 1.75rem 0 rgba(58,59,69,.10); margin-bottom: 1.5rem; transition: transform 0.2s; }
+        .border-left-primary { border-left: .25rem solid var(--primary) !important; }
+        .border-left-success { border-left: .25rem solid var(--success) !important; }
+        .border-left-warning { border-left: .25rem solid var(--warning) !important; }
+        .border-left-danger { border-left: .25rem solid var(--danger) !important; }
+        .table th { background-color: #f8f9fc; color: var(--dark); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; border-top: none; }
+        .table td { vertical-align: middle; font-size: 0.9rem; }
+        .form-control, .form-select { border-radius: 0.35rem; padding: 0.5rem 1rem; }
+        .btn { font-weight: 600; padding: 0.375rem 0.75rem; font-size: 0.9rem; }
+        .table-input { width: 80px; text-align: right; border: 1px solid #ced4da; padding: 2px 5px; border-radius: 4px; }
+        .badge { font-weight: 500; padding: 0.5em 0.7em; }
+        input[readonly] { background-color: #e9ecef; cursor: not-allowed; }
+        
+        /* Category Colors */
+        .bg-cat-sol { background-color: #e3f2fd; color: #0d47a1; }
+        .bg-cat-dry { background-color: #fff3e0; color: #e65100; }
+        .bg-cat-pkg { background-color: #e8f5e9; color: #1b5e20; }
+        .cursor-pointer { cursor: pointer; transition: transform 0.2s; }
+        .cursor-pointer:hover { transform: translateY(-3px); }
+        .cat-active { border: 2px solid var(--primary) !important; transform: scale(1.02); }
+    </style>
+</head>
+<body>
+
+<div id="loginContainer">
+    <div class="login-card text-center">
+        <h3 class="fw-bold mb-4 text-dark">Welcome Back</h3>
+        <form onsubmit="event.preventDefault(); login();">
+            <input type="text" id="username" class="form-control form-control-lg mb-3" placeholder="Username" value="admin">
+            <input type="password" id="password" class="form-control form-control-lg mb-4" placeholder="Password" value="password">
+            <button type="submit" class="btn btn-primary btn-lg w-100 shadow">Login</button>
+            <p id="loginError" class="text-danger mt-3 hidden">Invalid Credentials</p>
+        </form>
+    </div>
+</div>
+
+<div id="wrapper" class="hidden">
+    <nav id="sidebar">
+        <div class="sidebar-brand"><i class="bi bi-grid-1x2-fill me-2"></i> PRODUCTION ERP</div>
+        <div class="nav flex-column mt-3">
+            <a class="nav-link active" onclick="nav('dash',this)"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            <a class="nav-link" onclick="nav('prod',this)"><i class="bi bi-gear-wide-connected"></i> Production</a>
+            <a class="nav-link" onclick="nav('rec',this);loadRecM()"><i class="bi bi-journal-text"></i> Recipes</a>
+            <a class="nav-link" onclick="nav('sales',this); loadSales()"><i class="bi bi-cart3"></i> Sales</a>
+            <a class="nav-link" onclick="nav('inv',this); loadStock()"><i class="bi bi-box-seam"></i> Inventory</a>
+            <a class="nav-link" onclick="nav('purchasing',this); loadPurchasing()"><i class="bi bi-bag-plus"></i> Purchasing</a>
+            <a class="nav-link" onclick="nav('acc',this); loadExp()"><i class="bi bi-wallet2"></i> Accounting</a>
+            <a class="nav-link" onclick="nav('partners',this); loadPartners()"><i class="bi bi-people"></i> Partners</a>
+        </div>
+        <div class="mt-auto p-3">
+            <button onclick="logout()" class="btn btn-danger w-100 btn-sm"><i class="bi bi-box-arrow-right"></i> Logout</button>
+        </div>
+    </nav>
+
+    <div id="content-wrapper">
+        <div id="topbar">
+            <div class="d-flex align-items-center">
+                <span class="me-2 text-gray-600 small">Logged in as <b>Admin</b></span>
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px">AD</div>
+            </div>
+        </div>
+
+        <div class="container-fluid">
+            
+            <div id="view-dash" class="view-section">
+                <h3 class="h3 mb-4 text-gray-800">Dashboard Overview</h3>
+                <div class="row">
+                    <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-primary h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs fw-bold text-primary text-uppercase mb-1">Production Runs</div><div class="h5 mb-0 fw-bold text-gray-800" id="d-runs">-</div></div><div class="col-auto"><i class="bi bi-gear-fill h1 text-gray-300"></i></div></div></div></div></div>
+                    <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-success h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs fw-bold text-success text-uppercase mb-1">Total Sales</div><div class="h5 mb-0 fw-bold text-gray-800" id="d-sales">-</div></div><div class="col-auto"><i class="bi bi-currency-dollar h1 text-gray-300"></i></div></div></div></div></div>
+                    <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-warning h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs fw-bold text-warning text-uppercase mb-1">Total Expenses</div><div class="h5 mb-0 fw-bold text-gray-800" id="d-exp">-</div></div><div class="col-auto"><i class="bi bi-wallet-fill h1 text-gray-300"></i></div></div></div></div></div>
+                    <div class="col-xl-3 col-md-6 mb-4"><div class="card border-left-danger h-100 py-2"><div class="card-body"><div class="row no-gutters align-items-center"><div class="col mr-2"><div class="text-xs fw-bold text-danger text-uppercase mb-1">Low Stock Alerts</div><div class="h5 mb-0 fw-bold text-gray-800" id="d-stock">-</div></div><div class="col-auto"><i class="bi bi-exclamation-triangle-fill h1 text-gray-300"></i></div></div></div></div></div>
+                </div>
+            </div>
+
+            <div id="view-prod" class="view-section hidden">
+                <div class="row">
+                    <div class="col-lg-5">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">New Production Batch</h6></div>
+                            <div class="card-body">
+                                <label class="small fw-bold">PRODUCT</label><select id="pSel" class="form-select mb-3" onchange="loadRec()"><option>-- Select Product --</option></select>
+                                <div class="d-flex gap-2 mb-3">
+                                    <div class="flex-grow-1"><label class="small fw-bold">BATCH #</label><input id="pBatch" class="form-control" placeholder="Auto-generate"></div>
+                                    <div style="width:100px;"><label class="small fw-bold text-danger">S.G.</label><input id="pSG" type="number" class="form-control fw-bold" step="0.01"></div>
+                                </div>
+                                <div class="bg-light p-3 rounded mb-3 border">
+                                    <h6 class="small fw-bold text-secondary">RECIPE COSTING</h6>
+                                    <div class="table-responsive" style="max-height:200px"><table class="table table-sm table-borderless mb-0"><thead><tr><th>Item</th><th class="text-end">Cost</th><th class="text-end">Qty</th></tr></thead><tbody id="pIng"></tbody></table></div>
+                                    <div class="text-end small fw-bold text-primary mt-2 pt-2 border-top">RM Total: <span id="rmTotal">0.00</span></div>
+                                </div>
+                                <label class="small fw-bold">YIELD OUTPUT (<span id="uomLabel">KG</span>)</label>
+                                <input type="number" id="pYield" class="form-control form-control-lg fw-bold text-success mb-3" placeholder="0.00" readonly>
+                                <div id="pPkg" class="mb-3"></div>
+                                <button onclick="saveRun()" class="btn btn-primary w-100 py-2">SAVE PRODUCTION</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-7">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3 d-flex justify-content-between align-items-center"><h6 class="m-0 font-weight-bold text-primary">Production History</h6><button onclick="exportPdf()" class="btn btn-sm btn-outline-danger"><i class="bi bi-file-pdf"></i> Report</button></div>
+                            <div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0" id="histTable"><thead class="table-light"><tr><th>Batch</th><th>Product</th><th>Cost/L</th><th>Breakdown</th><th>Action</th></tr></thead><tbody id="pHist"></tbody></table></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-rec" class="view-section hidden">
+                <div class="card shadow mb-4">
+                    <div class="card-header py-3">
+                        <ul class="nav nav-pills card-header-pills">
+                            <li class="nav-item"><a class="nav-link active py-1" data-bs-toggle="tab" href="#tab-prod-m">Products</a></li>
+                            <li class="nav-item"><a class="nav-link py-1" data-bs-toggle="tab" href="#tab-rm-m">Raw Materials</a></li>
+                        </ul>
+                    </div>
+                    <div class="card-body">
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="tab-prod-m">
+                                <div class="d-flex justify-content-end mb-3"><button class="btn btn-primary" onclick="newProd()">+ New Product</button></div>
+                                <table class="table table-hover align-middle"><thead class="table-light"><tr><th>Product Name</th><th>Unit</th><th>Density</th><th>Overhead</th><th class="text-end">Action</th></tr></thead><tbody id="recList"></tbody></table>
+                            </div>
+                            <div class="tab-pane fade" id="tab-rm-m">
+                    <div class="row g-4">
+                        <div class="col-md-4">
+                            <div class="bg-light p-3 rounded border">
+                                <h6 class="fw-bold text-primary mb-3">Manage Material</h6>
+                                <input type="hidden" id="rmId" value="0">
+                                
+                                <label class="small fw-bold">CATEGORY</label>
+                                <select id="rmCat" class="form-select mb-2">
+                                    <option value="General">General</option>
+                                    <option value="SOLUTION">SOLUTION</option>
+                                    <option value="DRY POWDER">DRY POWDER</option>
+                                    <option value="PACKAGING">PACKAGING</option>
+                                </select>
+
+                                <label class="small fw-bold">NAME</label>
+                                <input id="rmName" class="form-control mb-2">
+                                <label class="small fw-bold">UNIT COST</label>
+                                <input id="rmCost" type="number" class="form-control mb-3">
+                                
+                                <button onclick="saveRm()" class="btn btn-success w-100">Save Material</button>
+                                <button onclick="clearRmForm()" class="btn btn-sm btn-outline-secondary w-100 mt-2">Clear Form</button>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="table-responsive border rounded" style="max-height:500px">
+                                <table class="table table-striped mb-0">
+                                    <thead class="table-light"><tr><th>Category</th><th>Name</th><th class="text-end">Cost</th><th class="text-end">Actions</th></tr></thead>
+                                    <tbody id="rmList"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-sales" class="view-section hidden">
+                <div class="row">
+                    <div class="col-lg-5">
+                        <div class="card shadow mb-4 border-left-success">
+                            <div class="card-header py-3 text-success"><h6 class="m-0 font-weight-bold">New Sales Invoice</h6></div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <label class="small fw-bold">CUSTOMER</label>
+                                    <div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="isWalkIn" onchange="toggleWalkIn()"><label class="form-check-label small" for="isWalkIn">Walk-in</label></div>
+                                </div>
+                                <select id="sCust" class="form-select mb-3"></select>
+                                <input id="sWalkInName" class="form-control mb-3 hidden" placeholder="Enter Client Name">
+                                
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6"><label class="small fw-bold">STATUS</label><select id="sStatus" class="form-select" onchange="togglePay()"><option value="Paid">Paid</option><option value="Credit">Credit</option></select></div>
+                                    <div class="col-6"><label class="small fw-bold">METHOD</label><select id="sMethod" class="form-select"><option>Cash</option><option>Mpesa</option><option>Bank</option></select></div>
+                                </div>
+                                <div id="txnDiv" class="mb-3"><label class="small fw-bold">TRANSACTION REF</label><input id="sTxn" class="form-control" placeholder="e.g. QKH12345"></div>
+
+                                <div class="bg-light p-3 border rounded mb-3">
+                                    <label class="small fw-bold">ADD ITEM</label><select id="sProd" class="form-select mb-2"></select>
+                                    <div class="row g-2"><div class="col-6"><input id="sQty" type="number" class="form-control" placeholder="Qty"></div><div class="col-6"><input id="sPrice" class="form-control" placeholder="Price"></div></div>
+                                    <button onclick="addSaleItem()" class="btn btn-sm btn-outline-secondary w-100 mt-2">Add Line</button>
+                                </div>
+                                <table class="table table-sm small mb-3"><thead><tr><th>Item</th><th>Qty</th><th class="text-end">Total</th></tr></thead><tbody id="sDraft"></tbody></table>
+                                <h4 class="text-end fw-bold text-success mb-3" id="sTotal">0.00</h4>
+                                <button onclick="saveSale()" class="btn btn-success w-100">GENERATE INVOICE</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-7"><div class="card shadow mb-4"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Sales History</h6></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Invoice</th><th>Customer</th><th>Pay</th><th class="text-end">Amount</th></tr></thead><tbody id="sHist"></tbody></table></div></div></div></div>
+                </div>
+            </div>
+
+            <div id="view-inv" class="view-section hidden">
+                
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white h-100 shadow-sm cursor-pointer" onclick="filterStock('All')">
+                            <div class="card-body d-flex align-items-center justify-content-between">
+                                <div><h6 class="small fw-bold opacity-75 mb-1">TOTAL INVENTORY</h6><h5 class="fw-bold mb-0">ALL ITEMS</h5></div>
+                                <i class="bi bi-grid-fill fs-3 opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-cat-sol h-100 border-0 shadow-sm cursor-pointer" onclick="filterStock('SOLUTION')">
+                            <div class="card-body d-flex align-items-center justify-content-between">
+                                <div><h6 class="small fw-bold opacity-75 mb-1 text-primary">RAW MATERIAL</h6><h5 class="fw-bold mb-0 text-primary">SOLUTION</h5></div>
+                                <i class="bi bi-droplet-fill fs-3 text-primary opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-cat-dry h-100 border-0 shadow-sm cursor-pointer" onclick="filterStock('DRY POWDER')">
+                            <div class="card-body d-flex align-items-center justify-content-between">
+                                <div><h6 class="small fw-bold opacity-75 mb-1 text-warning">RAW MATERIAL</h6><h5 class="fw-bold mb-0 text-warning">DRY POWDER</h5></div>
+                                <i class="bi bi-box-seam-fill fs-3 text-warning opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-cat-pkg h-100 border-0 shadow-sm cursor-pointer" onclick="filterStock('PACKAGING')">
+                            <div class="card-body d-flex align-items-center justify-content-between">
+                                <div><h6 class="small fw-bold opacity-75 mb-1 text-success">RAW MATERIAL</h6><h5 class="fw-bold mb-0 text-success">PACKAGING</h5></div>
+                                <i class="bi bi-box2-fill fs-3 text-success opacity-50"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
+                                <h6 class="m-0 font-weight-bold text-primary" id="invListTitle">All Items</h6>
+                                <input type="text" class="form-control form-control-sm" style="width: 200px;" placeholder="Search..." onkeyup="searchStock(this.value)">
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive" style="max-height: 500px;">
+                                    <table class="table table-striped table-hover mb-0">
+                                        <thead class="table-light sticky-top">
+                                            <tr><th>Category</th><th>Item Name</th><th>Qty</th><th class="text-end">Value</th><th class="text-center">Action</th></tr>
+                                        </thead>
+                                        <tbody id="iBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="card shadow mb-4 border-left-warning" id="adjCard">
+                            <div class="card-header py-3 text-warning"><h6 class="m-0 font-weight-bold">Stock Adjustment</h6></div>
+                            <div class="card-body">
+                                <label class="small fw-bold">ITEM TYPE</label>
+                                <select id="adjType" class="form-select mb-2" onchange="populateAdj()">
+                                    <option value="RawMaterial">Raw Material</option>
+                                    <option value="Product">Product</option>
+                                </select>
+                                <select id="adjItemId" class="form-select mb-3"></select>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6"><input id="adjQty" type="number" class="form-control" placeholder="Qty (+/-)"></div>
+                                    <div class="col-6"><input id="adjCost" type="number" class="form-control" placeholder="Cost"></div>
+                                </div>
+                                <input id="adjReason" class="form-control mb-3" placeholder="Reason">
+                                <button onclick="adjustStock()" class="btn btn-warning w-100 fw-bold text-white">POST ADJUSTMENT</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-purchasing" class="view-section hidden">
+                <div class="row">
+                    <div class="col-lg-5">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3 bg-secondary text-white"><h6 class="m-0 font-weight-bold">Create Purchase Order</h6></div>
+                            <div class="card-body">
+                                <label class="small fw-bold">SUPPLIER</label><select id="poSup" class="form-select mb-3"></select>
+                                
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6"><label class="small fw-bold">STATUS</label><select id="poStatus" class="form-select" onchange="togglePoPay()"><option value="Credit">Credit</option><option value="Paid">Paid</option></select></div>
+                                    <div class="col-6"><label class="small fw-bold">METHOD</label><select id="poMethod" class="form-select" disabled><option>Cash</option><option>Mpesa</option><option>Bank</option></select></div>
+                                </div>
+                                <div id="poTxnDiv" class="mb-3 hidden"><label class="small fw-bold">TRANSACTION REF</label><input id="poTxn" class="form-control" placeholder="e.g. QKH12345"></div>
+
+                                <div class="bg-light p-3 border rounded mb-3"><label class="small fw-bold">ITEM</label><select id="poRm" class="form-select mb-2"></select><div class="row g-2"><div class="col-6"><input id="poQty" class="form-control" placeholder="Qty"></div><div class="col-6"><input id="poCost" class="form-control" placeholder="Cost"></div></div><button onclick="addPoLine()" class="btn btn-sm btn-outline-dark w-100 mt-2">Add</button></div>
+                                <table class="table table-sm mb-3"><thead><tr><th>Item</th><th>Qty</th><th class="text-end">Total</th></tr></thead><tbody id="poDraft"></tbody></table>
+                                <button onclick="createPO()" class="btn btn-dark w-100">CONFIRM ORDER</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-7"><div class="card shadow mb-4"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">PO History</h6></div><div class="card-body p-0"><table class="table table-hover mb-0"><thead><tr><th>PO#</th><th>Supplier</th><th>Pay</th><th class="text-end">Action</th></tr></thead><tbody id="poHist"></tbody></table></div></div></div>
+                </div>
+            </div>
+
+            <div id="view-acc" class="view-section hidden"><div class="row"><div class="col-lg-4"><div class="card shadow mb-4 border-left-danger"><div class="card-header py-3 text-danger"><h6 class="m-0 font-weight-bold">Record Expense</h6></div><div class="card-body"><input id="exDesc" class="form-control mb-2" placeholder="Description"><select id="exCat" class="form-select mb-2"><option>Petty Cash</option><option>Salary</option><option>Utility</option><option>Transport</option><option>Other</option></select><input id="exAmt" class="form-control mb-3" placeholder="Amount"><button onclick="saveExp()" class="btn btn-danger w-100">Save Expense</button></div></div></div><div class="col-lg-8"><div class="card shadow mb-4"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Expense Ledger</h6></div><div class="card-body p-0"><table class="table table-striped mb-0"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="text-end">Amount</th></tr></thead><tbody id="exHist"></tbody></table></div></div></div></div></div>
+            <div id="view-partners" class="view-section hidden"><div class="row"><div class="col-lg-4"><div class="card shadow mb-4 border-left-success"><div class="card-header py-3 text-success"><h6 class="m-0 font-weight-bold">Add Partner</h6></div><div class="card-body"><input id="ptName" class="form-control mb-2" placeholder="Name"><select id="ptType" class="form-select mb-2"><option>Customer</option><option>Supplier</option></select><input id="ptPhone" class="form-control mb-2" placeholder="Phone"><input id="ptEmail" class="form-control mb-2" placeholder="Email"><input id="ptAddress" class="form-control mb-3" placeholder="Address"><button onclick="savePartner()" class="btn btn-success w-100">Save</button></div></div></div><div class="col-lg-8"><div class="card shadow mb-4"><div class="card-header py-3"><h6 class="m-0 font-weight-bold text-primary">Directory</h6></div><div class="card-body p-0"><table class="table table-hover mb-0"><thead><tr><th>Name</th><th>Type</th><th>Phone</th></tr></thead><tbody id="ptBody"></tbody></table></div></div></div></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="prodModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content border-0 shadow-lg"><div class="modal-header bg-primary text-white"><h5 class="modal-title">Edit Product</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="epId"><div class="row g-3 mb-4"><div class="col-md-6"><label class="small">NAME</label><input id="epName" class="form-control"></div><div class="col-4 col-md-2"><label class="small">UNIT</label><input id="epUnit" class="form-control"></div><div class="col-4 col-md-2"><label class="small">DENSITY</label><input id="epGrav" class="form-control"></div><div class="col-4 col-md-2"><label class="small">OVERHEAD %</label><input id="epOver" class="form-control"></div></div><h6 class="fw-bold border-bottom pb-2 mb-3">Ingredients <button class="btn btn-sm btn-outline-primary float-end py-0" onclick="addIngRow()">+ Add</button></h6><div id="epIngs" class="mb-4"></div><h6 class="fw-bold border-bottom pb-2 mb-3">Packaging <button class="btn btn-sm btn-outline-primary float-end py-0" onclick="addPkgRow()">+ Add</button></h6><div id="epPkgs"></div></div><div class="modal-footer bg-light"><button onclick="saveProd()" class="btn btn-success px-4">Save Changes</button></div></div></div></div>
+<div class="modal fade" id="editModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content border-0 shadow-lg"><div class="modal-header bg-dark text-white"><h5 class="modal-title">Edit Packaging</h5><button class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="editRunId"><div class="row mb-3 pb-2 border-bottom"><div class="col-3 text-muted">Batch</div><div class="col-9 fw-bold" id="editBatchNo"></div><div class="col-3 text-muted">Product</div><div class="col-9 fw-bold" id="editProdName"></div></div><div id="editPkgContent"></div></div><div class="modal-footer"><button onclick="saveEditedPackaging()" class="btn btn-success">Save Changes</button></div></div></div></div>
+<div class="modal fade" id="detModal"><div class="modal-dialog"><div class="modal-content border-0 shadow"><div class="modal-header"><h5>Detailed Breakdown</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-0" id="detBody"></div></div></div></div>
+
+<script>
+    const API = "http://localhost:5000/api";
+    const fmt = (n) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(n);
+    
+    // Global State
+    let prods = [], invLists = { rawMaterials: [], products: [] }, saleItems = [], poItems = [], historyData = [], rawMats = [];
+    let fullStockData = []; // NEW: For Filtering
+
+    function nav(id, el) { 
+        document.querySelectorAll('.view-section').forEach(d => d.classList.add('hidden')); 
+        document.getElementById('view-' + id).classList.remove('hidden'); 
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
+        el.classList.add('active'); 
+        if (id === 'dash') loadDash(); 
+    }
+    window.onload = () => { if (localStorage.getItem('auth')) showApp(); }
+    function showApp() { document.getElementById('loginContainer').classList.add('hidden'); document.getElementById('wrapper').classList.remove('hidden'); init(); }
+    function login() { fetch(API+"/production/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username:document.getElementById('username').value,password:document.getElementById('password').value})}).then(r=>{if(r.ok){localStorage.setItem('auth','1'); showApp();}else alert('Invalid');}); }
+    function logout() { localStorage.removeItem('auth'); location.reload(); }
+
+    async function init() {
+        const r = await fetch(API+"/production/products"); prods = await r.json();
+        const rm = await fetch(API+"/inventory/items"); invLists = await rm.json(); rawMats = invLists.rawMaterials;
+        
+        let h = '<option>-- Select Product --</option>'; prods.forEach(p => h += `<option value="${p.id}">${p.productName}</option>`);
+        document.getElementById('pSel').innerHTML = h; 
+        
+        let sH = '<option value="">-- Select Item --</option>';
+        if (invLists.products) { invLists.products.forEach(p => sH += `<option value="${p.id}" data-oid="${p.packagingOptionId}">${p.name}</option>`); }
+        document.getElementById('sProd').innerHTML = sH;
+        
+        loadDash(); loadPHist(); loadStock(); loadRecM();
+    }
+
+    async function loadDash() {
+        const [h, s, e, st] = await Promise.all([fetch(API+"/production/history").then(r=>r.json()), fetch(API+"/sales/history").then(r=>r.json()), fetch(API+"/accounting/expenses").then(r=>r.json()), fetch(API+"/inventory/stock-levels").then(r=>r.json())]);
+        document.getElementById('d-runs').innerText = h.length;
+        document.getElementById('d-sales').innerText = fmt(s.reduce((a,b)=>a+b.totalAmount,0));
+        document.getElementById('d-exp').innerText = fmt(e.reduce((a,b)=>a+b.amount,0));
+        document.getElementById('d-stock').innerText = st.filter(i=>i.currentQty<50).length;
+    }
+
+    // --- INVENTORY (UPDATED WITH CATEGORIES) ---
+    async function loadStock() { 
+        const r = await fetch(API + "/inventory/stock-levels"); 
+        fullStockData = await r.json(); 
+        filterStock('All'); 
+        populateAdj(); 
+    }
+
+    function filterStock(category) {
+        // Visual Active State
+        document.querySelectorAll('.card').forEach(c => c.classList.remove('cat-active'));
+        // Find clicked card (optional visual enhancement)
+        
+        document.getElementById('invListTitle').innerText = category === 'All' ? 'All Items' : category + ' Inventory';
+        
+        // Filter Logic
+        const target = category.toUpperCase();
+        const filtered = category === 'All' ? fullStockData : fullStockData.filter(i => (i.category || i.Category || 'General').toUpperCase() === target);
+        
+        renderStock(filtered);
+    }
+    
+    function searchStock(q) {
+        const lowerQ = q.toLowerCase();
+        renderStock(fullStockData.filter(i => i.name.toLowerCase().includes(lowerQ) || (i.category && i.category.toLowerCase().includes(lowerQ))));
+    }
+
+    function renderStock(data) {
+        let h = "";
+        data.forEach(i => {
+            let cat = i.category || 'General';
+            let badge = cat==='SOLUTION'?'bg-cat-sol':(cat==='PACKAGING'?'bg-cat-pkg':(cat==='DRY POWDER'?'bg-cat-dry':'bg-secondary'));
+            h += `<tr>
+                <td><span class="badge ${badge} text-dark border">${cat}</span></td>
+                <td class="fw-bold">${i.name}</td>
+                <td class="text-center">${i.currentQty}</td>
+                <td class="text-end text-muted small">${fmt(i.avgValue)}</td>
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-warning py-0 px-2 me-1" onclick="prepAdj('${i.type}', ${i.id})"><i class="bi bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="delItem('${i.type}', ${i.id})"><i class="bi bi-trash"></i></button>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('iBody').innerHTML = h;
+    }
+    
+    function populateAdj(){ const type = document.getElementById('adjType').value; const list = type === 'RawMaterial' ? invLists.rawMaterials : invLists.products; let h = '<option>-- Select --</option>'; list.forEach(i => h += `<option value="${i.id}" data-cost="${i.cost || 0}">${i.name}</option>`); const sel = document.getElementById('adjItemId'); sel.innerHTML = h; sel.onchange = () => document.getElementById('adjCost').value = sel.options[sel.selectedIndex].dataset.cost || 0; }
+    function prepAdj(type, id) { document.getElementById('adjType').value=type; populateAdj(); document.getElementById('adjItemId').value=id; document.getElementById('adjCard').scrollIntoView({behavior: "smooth"}); }
+    async function delItem(type, id) { if(confirm('Delete?')) await fetch(`${API}/inventory/delete-item/${type}/${id}`, {method:'DELETE'}); loadStock(); }
+    async function adjustStock() { await fetch(API+"/inventory/adjust", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ itemType: document.getElementById('adjType').value, itemId: parseInt(document.getElementById('adjItemId').value), quantity: parseFloat(document.getElementById('adjQty').value), costPrice: parseFloat(document.getElementById('adjCost').value), reason: document.getElementById('adjReason').value })}); alert('Adjusted'); loadStock(); }
+
+    // --- RECIPES (UPDATED TO SAVE CATEGORY) ---
+    function loadRecM(){ 
+        let h=""; 
+        prods.forEach(p=>h+=`<tr><td>${p.productName}</td><td>${p.unitOfMeasure}</td><td>${p.specificGravity}</td><td>${p.overheadPercentage}%</td><td class="text-end"><button class="btn btn-sm btn-primary" onclick='editProd(${JSON.stringify(p).replace(/'/g, "")})'>Edit</button></td></tr>`); 
+        document.getElementById('recList').innerHTML=h; 
+        
+        h=""; 
+        rawMats.forEach(r=>{ 
+            let cat = r.category || 'General'; 
+            let badge = cat==='SOLUTION'?'bg-cat-sol':(cat==='PACKAGING'?'bg-cat-pkg':(cat==='DRY POWDER'?'bg-cat-dry':'bg-secondary')); 
+            h+=`<tr><td><span class="badge ${badge} text-dark">${cat}</span></td><td>${r.name}</td><td class="text-end">${fmt(r.unitCost)}</td><td class="text-end"><button class="btn btn-sm btn-warning me-1" onclick="editRm(${r.id}, '${r.name}', ${r.unitCost}, '${cat}')"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-danger" onclick="delRm(${r.id})"><i class="bi bi-trash"></i></button></td></tr>` 
+        }); 
+        document.getElementById('rmList').innerHTML=h; 
+    }
+
+    function editRm(id, name, cost, cat){ 
+        document.getElementById('rmId').value=id; 
+        document.getElementById('rmName').value=name; 
+        document.getElementById('rmCost').value=cost; 
+        document.getElementById('rmCat').value=cat; 
+    }
+    
+    function clearRmForm(){ 
+        document.getElementById('rmId').value="0"; 
+        document.getElementById('rmName').value=""; 
+        document.getElementById('rmCost').value=""; 
+    }
+
+    async function saveRm(){ 
+        await fetch(API+"/inventory/raw-materials", { 
+            method: "POST", headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify({ 
+                id: parseInt(document.getElementById('rmId').value), 
+                name: document.getElementById('rmName').value, 
+                unitCost: parseFloat(document.getElementById('rmCost').value), 
+                category: document.getElementById('rmCat').value 
+            }) 
+        }); 
+        init(); loadRecM(); clearRmForm(); 
+    }
+    
+    async function delRm(id){ if(confirm("Delete?")) await fetch(`${API}/inventory/delete-item/RawMaterial/${id}`, {method:'DELETE'}); init(); loadRecM(); }
+
+    // SALES
+    function toggleWalkIn() { const isWalk = document.getElementById('isWalkIn').checked; if(isWalk) { document.getElementById('sCust').classList.add('hidden'); document.getElementById('sWalkInName').classList.remove('hidden'); } else { document.getElementById('sCust').classList.remove('hidden'); document.getElementById('sWalkInName').classList.add('hidden'); } }
+    function togglePay() { const status = document.getElementById('sStatus').value; const el = document.getElementById('txnDiv'); if(status === 'Paid') el.classList.remove('hidden'); else el.classList.add('hidden'); }
+    function addSaleItem(){ let sel = document.getElementById('sProd'); let pid = sel.value; let oid = sel.options[sel.selectedIndex].dataset.oid; let name = sel.options[sel.selectedIndex].text; let q = document.getElementById('sQty').value; let pr = document.getElementById('sPrice').value; if(!pid || !q) return alert("Select item"); saleItems.push({productId: parseInt(pid), packagingOptionId: parseInt(oid), quantity: parseInt(q), unitPrice: parseFloat(pr), name: name, total: q*pr}); renderSale(); }
+    function renderSale(){ let h = "", t = 0; saleItems.forEach(i => { t += i.total; h += `<tr><td>${i.name}</td><td>${i.quantity}</td><td class="text-end">${fmt(i.total)}</td></tr>`; }); document.getElementById('sDraft').innerHTML = h; document.getElementById('sTotal').innerText = fmt(t); }
+    async function loadSales(){ let r = await fetch(API+"/inventory/partners?type=Customer"); let d = await r.json(); let h = "<option value=''>-- Select --</option>"; d.forEach(c => h += `<option value="${c.id}">${c.name}</option>`); document.getElementById('sCust').innerHTML = h; r = await fetch(API+"/sales/history"); d = await r.json(); h = ""; d.forEach(s => { let badge = s.paymentStatus == 'Paid' ? '<span class="badge bg-success">Paid</span>' : '<span class="badge bg-warning text-dark">Credit</span>'; h += `<tr><td>${s.invoiceNumber}</td><td>${s.customerName}</td><td>${badge}</td><td class="text-end">${fmt(s.totalAmount)}</td></tr>`; }); document.getElementById('sHist').innerHTML = h; }
+    async function saveSale(){
+        const isWalk = document.getElementById('isWalkIn').checked;
+        const payload = { customerId: isWalk ? null : document.getElementById('sCust').value, walkInName: isWalk ? document.getElementById('sWalkInName').value : null, paymentStatus: document.getElementById('sStatus').value, paymentMethod: document.getElementById('sMethod').value, transactionCode: document.getElementById('sTxn').value, items: saleItems };
+        if(!payload.customerId && !payload.walkInName) return alert("Select Customer");
+        await fetch(API+"/sales/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+        alert('Generated'); saleItems = []; renderSale(); loadSales();
+    }
+
+    // PO (Purchasing)
+    function togglePoPay() { const s = document.getElementById('poStatus').value; const en = s === 'Paid'; document.getElementById('poMethod').disabled = !en; if(en) document.getElementById('poTxnDiv').classList.remove('hidden'); else document.getElementById('poTxnDiv').classList.add('hidden'); }
+    async function loadPurchasing(){ let r = await fetch(API+"/inventory/partners?type=Supplier"); let d = await r.json(); let s = document.getElementById('poSup'); s.innerHTML='<option>-- Select --</option>'; d.forEach(p => s.innerHTML+=`<option value="${p.id}">${p.name}</option>`); s = document.getElementById('poRm'); s.innerHTML='<option>-- Item --</option>'; rawMats.forEach(m => s.innerHTML+=`<option value="${m.id}">${m.name}</option>`); loadPoHist(); }
+    function addPoLine(){ let rid=document.getElementById('poRm').value, q=document.getElementById('poQty').value, c=document.getElementById('poCost').value; let rm=invLists.rawMaterials.find(m=>m.id==rid); poItems.push({rawMaterialId:rid, quantity:q, unitCost:c, name:rm.name, total:q*c}); renderPo(); }
+    function renderPo(){ let h=""; poItems.forEach(i=>h+=`<tr><td>${i.name}</td><td>${i.quantity}</td><td class="text-end">${fmt(i.total)}</td></tr>`); document.getElementById('poDraft').innerHTML=h; }
+    async function createPO(){ 
+        const payload = { supplierId: document.getElementById('poSup').value, items: poItems, paymentStatus: document.getElementById('poStatus').value, paymentMethod: document.getElementById('poMethod').value, transactionCode: document.getElementById('poTxn').value };
+        await fetch(API+"/procurement/create",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); alert('Created'); poItems=[]; renderPo(); loadPoHist(); 
+    }
+    async function loadPoHist(){ const r=await fetch(API+"/procurement/history"); const d=await r.json(); let h=""; d.forEach(p=>{ let badge = p.paymentStatus=='Paid' ? '<span class="badge bg-success">Paid</span>' : '<span class="badge bg-warning text-dark">Credit</span>'; let btn=p.status=='Pending'?`<button class="btn btn-sm btn-outline-dark py-0" onclick="recv(${p.id})">Receive</button>`:`<span class="badge bg-success">Received</span>`; h+=`<tr><td>${p.poNumber}</td><td>${p.supplierName}</td><td>${badge}</td><td class="text-end">${btn}</td></tr>`;}); document.getElementById('poHist').innerHTML=h; }
+    async function recv(id){ if(confirm('Receive Stock?')) await fetch(API+`/procurement/${id}/receive`,{method:"POST"}); loadPoHist(); }
+
+    // STANDARD / HELPERS
+    function newProd(){ editProd({id:0, productName:"", unitOfMeasure:"KG", specificGravity:1.0, overheadPercentage:10, ingredients:[], packagingOptions:[]}); }
+    function editProd(p){ document.getElementById('epId').value=p.id; document.getElementById('epName').value=p.productName; document.getElementById('epUnit').value=p.unitOfMeasure; document.getElementById('epGrav').value=p.specificGravity; document.getElementById('epOver').value=p.overheadPercentage; document.getElementById('epIngs').innerHTML=""; p.ingredients.forEach(i=>addIngRow(i)); document.getElementById('epPkgs').innerHTML=""; p.packagingOptions.forEach(o=>addPkgRow(o)); new bootstrap.Modal(document.getElementById('prodModal')).show(); }
+    function addIngRow(i={rawMaterialId:"", standardQty:""}){ let ops=""; rawMats.forEach(r=>ops+=`<option value="${r.id}" ${r.id==i.rawMaterialId?'selected':''}>${r.name}</option>`); let div=document.createElement('div'); div.className="row g-1 mb-2 ep-ing"; div.innerHTML=`<div class="col-7"><select class="form-select form-select-sm rm-sel">${ops}</select></div><div class="col-3"><input class="form-control form-control-sm qty" value="${i.standardQty}" placeholder="Qty"></div><div class="col-2"><button class="btn btn-sm btn-danger w-100" onclick="this.parentElement.parentElement.remove()">X</button></div>`; document.getElementById('epIngs').appendChild(div); }
+    function addPkgRow(o={sizeLabel:"", capacity:"", emptyContainerCost:""}){ let div=document.createElement('div'); div.className="row g-1 mb-2 ep-pkg"; div.innerHTML=`<div class="col-4"><input class="form-control form-control-sm lbl" value="${o.sizeLabel}" placeholder="Label"></div><div class="col-3"><input class="form-control form-control-sm cap" value="${o.capacity}" placeholder="Cap"></div><div class="col-3"><input class="form-control form-control-sm cost" value="${o.emptyContainerCost}" placeholder="Cost"></div><div class="col-2"><button class="btn btn-sm btn-danger w-100" onclick="this.parentElement.parentElement.remove()">X</button></div>`; document.getElementById('epPkgs').appendChild(div); }
+    async function saveProd(){ let p={id:parseInt(document.getElementById('epId').value), productName:document.getElementById('epName').value, unitOfMeasure:document.getElementById('epUnit').value, specificGravity:parseFloat(document.getElementById('epGrav').value), overheadPercentage:parseFloat(document.getElementById('epOver').value), ingredients:[], packagingOptions:[]}; document.querySelectorAll('.ep-ing').forEach(d=>p.ingredients.push({rawMaterialId:parseInt(d.querySelector('.rm-sel').value), standardQty:parseFloat(d.querySelector('.qty').value)})); document.querySelectorAll('.ep-pkg').forEach(d=>p.packagingOptions.push({sizeLabel:d.querySelector('.lbl').value, capacity:parseFloat(d.querySelector('.cap').value), emptyContainerCost:parseFloat(d.querySelector('.cost').value)})); let url = p.id===0 ? "/products/create" : "/products/update"; await fetch(API+"/production"+url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p)}); init(); loadRecM(); bootstrap.Modal.getInstance(document.getElementById('prodModal')).hide(); }
+
+    async function saveExp(){ await fetch(API+"/accounting/expense", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ description: document.getElementById('exDesc').value, amount: parseFloat(document.getElementById('exAmt').value), category: document.getElementById('exCat').value }) }); loadExp(); }
+    async function loadExp(){ const r = await fetch(API+"/accounting/expenses"); const d = await r.json(); let h = ""; d.forEach(e => h += `<tr><td>${new Date(e.date).toLocaleDateString()}</td><td>${e.description}</td><td>${e.category}</td><td class="text-end">${fmt(e.amount)}</td></tr>`); document.getElementById('exHist').innerHTML = h; }
+    async function savePartner(){ await fetch(API+"/inventory/partners", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: document.getElementById('ptName').value, type: document.getElementById('ptType').value, phone: document.getElementById('ptPhone').value, email: document.getElementById('ptEmail').value, address: document.getElementById('ptAddress').value }) }); loadPart(); }
+    async function loadPart(){ const r = await fetch(API+"/inventory/partners"); const d = await r.json(); let h = ""; d.forEach(p => h += `<tr><td>${p.name}</td><td>${p.type}</td><td>${p.phone}</td><td>${p.email||'-'}</td></tr>`); document.getElementById('ptBody').innerHTML = h; }
+
+    function loadRec() { let p = prods.find(x => x.id == document.getElementById('pSel').value); if(!p) return; document.getElementById('uomLabel').innerText = p.unitOfMeasure; document.getElementById('pSG').value = p.specificGravity; let h = ""; p.ingredients.forEach(i => h += `<tr class="ing" data-id="${i.rawMaterialId}" data-cost="${i.rawMaterial.unitCost}"><td>${i.rawMaterial.name}</td><td class="text-end">${fmt(i.rawMaterial.unitCost)}</td><td class="text-end"><input class="form-control form-control-sm text-end qty" value="${i.standardQty}" oninput="calcRm()" style="width:80px; display:inline-block"></td></tr>`); document.getElementById('pIng').innerHTML = h; h = "<div class='row g-2'>"; p.packagingOptions.forEach(o => h += `<div class="col-6"><div class="input-group input-group-sm mb-2 pkg" data-id="${o.id}"><span class="input-group-text fw-bold" style="width:50px">${o.sizeLabel}</span><input type="number" class="form-control qty" placeholder="Qty"></div></div>`); document.getElementById('pPkg').innerHTML = h + "</div>"; calcRm(); }
+    function calcRm() { let t = 0, y = 0; document.querySelectorAll('.ing').forEach(r => { let q = parseFloat(r.querySelector('.qty').value) || 0; t += (parseFloat(r.dataset.cost) * q); y += q; }); document.getElementById('rmTotal').innerText = fmt(t); document.getElementById('pYield').value = y.toFixed(2); }
+    async function saveRun() { let p = prods.find(x => x.id == document.getElementById('pSel').value); let ings=[], pkgs=[]; document.querySelectorAll('.ing').forEach(r=>ings.push({rawMaterialId:r.dataset.id, qtyUsed:parseFloat(r.querySelector('.qty').value)||0})); document.querySelectorAll('.pkg').forEach(r=>pkgs.push({packagingOptionId:r.dataset.id, quantity:parseInt(r.querySelector('.qty').value)||0})); await fetch(API+"/production/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({batchNumber:document.getElementById('pBatch').value, productId:p.id, totalYield:parseFloat(document.getElementById('pYield').value), specificGravity:parseFloat(document.getElementById('pSG').value), ingredientsUsed:ings, packaging:pkgs})}); alert('Saved'); loadPHist(); }
+    async function loadPHist() { const r = await fetch(API + "/production/history"); historyData = await r.json(); let h = ""; historyData.forEach(x => { let pkgTxt = x.packages.map(p => `<span class="badge bg-light text-dark border me-1 mb-1">${p.quantityProduced}x${p.sizeLabel}</span>`).join(""); h += `<tr><td class="fw-bold text-primary">${x.batchNumber}</td><td>${x.productDefinition.productName}</td><td>${fmt(x.costPerLitre)}</td><td>${pkgTxt}</td><td><div class="btn-group"><button class="btn btn-sm btn-outline-info" onclick='showDet(${x.id})'><i class="bi bi-eye"></i></button><button class="btn btn-sm btn-outline-primary" onclick="openEditRun(${x.id})"><i class="bi bi-pencil"></i></button><button class="btn btn-sm btn-outline-danger" onclick="deleteRun(${x.id})"><i class="bi bi-trash"></i></button></div></td></tr>`; }); document.getElementById('pHist').innerHTML = h; }
+    function showDet(id) { let run = historyData.find(r=>r.id==id); let h = `<table class='table table-striped small'><thead><tr><th>Size</th><th>Liquid</th><th>Tin</th><th>VAT</th><th class="text-end">Unit Total</th></tr></thead><tbody>`; run.packages.forEach(p => h += `<tr><td>${p.sizeLabel}</td><td>${fmt(p.snapshotLiquidCost)}</td><td>${p.snapshotTinCost}</td><td>${fmt(p.snapshotVat)}</td><td class="fw-bold text-end">${fmt(p.unitFinalCost)}</td></tr>`); document.getElementById('detBody').innerHTML = h + "</tbody></table>"; new bootstrap.Modal(document.getElementById('detModal')).show(); }
+    async function deleteRun(id) { if(!confirm("Delete?")) return; await fetch(API + `/production/${id}`, { method: 'DELETE' }); loadPHist(); loadDash(); }
+    function openEditRun(id) { let run = historyData.find(r=>r.id==id); document.getElementById('editRunId').value = id; document.getElementById('editBatchNo').innerText = run.batchNumber; document.getElementById('editProdName').innerText = run.productDefinition.productName; let h = ""; run.productDefinition.packagingOptions.forEach(opt => { let existing = run.packages.find(p=>p.sizeLabel == opt.sizeLabel); let val = existing ? existing.quantityProduced : 0; h += `<div class="row mb-2 align-items-center epkg-row" data-oid="${opt.id}"><div class="col-4 fw-bold small">${opt.sizeLabel}</div><div class="col-8"><input type="number" class="form-control form-control-sm epkg-val" value="${val}"></div></div>`; }); document.getElementById('editPkgContent').innerHTML = h; new bootstrap.Modal(document.getElementById('editModal')).show(); }
+    async function saveEditedPackaging() { let pkgs=[]; document.querySelectorAll('.epkg-row').forEach(row => { let q = parseInt(row.querySelector('.epkg-val').value)||0; if(q>0) pkgs.push({packagingOptionId: parseInt(row.dataset.oid), quantity: q}); }); await fetch(API+`/production/${document.getElementById('editRunId').value}/update-packaging`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(pkgs)}); alert("Updated!"); bootstrap.Modal.getInstance(document.getElementById('editModal')).hide(); loadPHist(); }
+    
+    function exportPdf() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text("Report", 14, 10); doc.autoTable({ html: '#histTable' }); doc.save('report.pdf'); }
+</script>
+</body>
+</html>

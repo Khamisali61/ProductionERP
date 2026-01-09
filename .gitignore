@@ -1,0 +1,10 @@
+# .gitignore
+bin/
+obj/
+.vs/
+.vscode/
+*.db
+*.db-shm
+*.db-wal
+*.log
+appsettings.Development.json
