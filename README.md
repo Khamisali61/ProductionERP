@@ -54,8 +54,8 @@ A comprehensive, full-stack Enterprise Resource Planning (ERP) system designed f
 ### Steps
 1.  **Clone the repository**
     ```bash
-    git clone [https://github.com/yourusername/production-erp.git](https://github.com/yourusername/production-erp.git)
-    cd production-erp
+    git clone [https://github.com/Khamisali61/ProductionERP.git](https://github.com/Khamisali61/ProductionERP.git)
+    cd ProductionERP
     ```
 
 2.  **Run the Backend**
