@@ -70,8 +70,8 @@ A comprehensive, full-stack Enterprise Resource Planning (ERP) system designed f
     Open the `Frontend/index.html` file in your browser.
 
 4.  **Login**
-    * **Username**: `admin`
-    * **Password**: `password`
+    * **Username**: ``
+    * **Password**: ``
 
 ## 📂 Project Structure
 * **ProductionApi**: Contains the C# backend logic, database context, and API controllers.
